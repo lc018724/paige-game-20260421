@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/paigeturner/.openclaw/workspace/projects/game_prototype_20260421/.build/arm64-apple-macosx/debug/ThreadGameTests.build/primary.swiftdeps"
+  },
+  "/Users/paigeturner/.openclaw/workspace/projects/game_prototype_20260421/Tests/ThreadGameTests/ThreadGameTests.swift": {
+    "dependencies": "/Users/paigeturner/.openclaw/workspace/projects/game_prototype_20260421/.build/arm64-apple-macosx/debug/ThreadGameTests.build/ThreadGameTests.d",
+    "object": "/Users/paigeturner/.openclaw/workspace/projects/game_prototype_20260421/.build/arm64-apple-macosx/debug/ThreadGameTests.build/ThreadGameTests.swift.o",
+    "swiftmodule": "/Users/paigeturner/.openclaw/workspace/projects/game_prototype_20260421/.build/arm64-apple-macosx/debug/ThreadGameTests.build/ThreadGameTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/paigeturner/.openclaw/workspace/projects/game_prototype_20260421/.build/arm64-apple-macosx/debug/ThreadGameTests.build/ThreadGameTests.swiftdeps",
+    "diagnostics": "/Users/paigeturner/.openclaw/workspace/projects/game_prototype_20260421/.build/arm64-apple-macosx/debug/ThreadGameTests.build/ThreadGameTests.dia"
+  }
+}
