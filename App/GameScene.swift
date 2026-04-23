@@ -60,6 +60,12 @@ final class GameScene: SKScene {
     /// True once ball has cleanly passed ring1 on the current throw (two-ring mode).
     private var ring1Cleared: Bool = false
 
+    // MARK: - First-run tutorial
+
+    /// True on the very first session before the player has ever fired.
+    /// Persisted in UserDefaults so the hint disappears permanently after one tap.
+    private var isFirstRun: Bool = !UserDefaults.standard.bool(forKey: "hasPlayedOnce")
+
     // MARK: - State tracking
 
     /// Tracks whether the ball was below the ring on the previous frame.
@@ -79,6 +85,11 @@ final class GameScene: SKScene {
 
     /// Alternates 0/1 each frame to emit trail dots every other frame.
     private var trailFrameSkip: Int = 0
+
+    // MARK: - Ball skin
+
+    /// Active skin applied to the ball this session, resolved once in setupBall().
+    private var currentSkin: BallSkin = .white
 
     // MARK: - Combo state
 
@@ -178,7 +189,7 @@ final class GameScene: SKScene {
         let node = SKShapeNode(path: path)
         node.strokeColor = goldColor
         node.fillColor = .clear
-        node.lineWidth = ringLineWidth
+        node.lineWidth = ringLineWidth + (rotationSpeed >= 3.0 ? 2 : 0)
         node.lineCap = .round
         node.name = "ring"
 
@@ -221,9 +232,11 @@ final class GameScene: SKScene {
 
     private func setupBall() {
         ballNode = SKShapeNode(circleOfRadius: ballRadius)
-        ballNode.fillColor = whiteColor
+        let skin = BallSkin.current()
+        currentSkin = skin
+        ballNode.fillColor = skin.color
+        ballNode.glowWidth = skin.glowWidth
         ballNode.strokeColor = .clear
-        ballNode.glowWidth = 3
         ballNode.name = "ball"
 
         ballNode.physicsBody = SKPhysicsBody(circleOfRadius: ballRadius)
@@ -269,6 +282,22 @@ final class GameScene: SKScene {
         comboLabel.alpha = 0
         comboLabel.zPosition = 10
         addChild(comboLabel)
+
+        // First-run hint: pulsing label near the ball so new players know what to do.
+        if isFirstRun {
+            let hint = SKLabelNode(fontNamed: "Georgia")
+            hint.name = "hintLabel"
+            hint.text = "TAP TO FIRE"
+            hint.fontSize = 15
+            hint.fontColor = UIColor.white.withAlphaComponent(0.55)
+            hint.position = CGPoint(x: 0, y: ballStartY - 40)
+            hint.zPosition = 15
+            hint.run(SKAction.repeatForever(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.2, duration: 0.8),
+                SKAction.fadeAlpha(to: 0.55, duration: 0.8)
+            ])))
+            addChild(hint)
+        }
     }
 
     private func updateHUD() {
@@ -282,6 +311,16 @@ final class GameScene: SKScene {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard !gameState.isOver else { return }
         guard let body = ballNode.physicsBody else { return }
+
+        // Dismiss the first-run hint permanently on the player's very first tap.
+        if isFirstRun {
+            isFirstRun = false
+            UserDefaults.standard.set(true, forKey: "hasPlayedOnce")
+            childNode(withName: "hintLabel")?.run(SKAction.sequence([
+                SKAction.fadeOut(withDuration: 0.3),
+                SKAction.removeFromParent()
+            ]))
+        }
 
         // Cancel idle pulse before launching.
         ballNode.removeAction(forKey: "idlePulse")
@@ -443,6 +482,11 @@ final class GameScene: SKScene {
         ])
         scoreLabel.run(pop)
 
+        // If this score beats the stored best, briefly turn the label gold as a preview.
+        if gameState.score > HighScoreStore().bestScore {
+            scoreLabel.fontColor = goldColor
+        }
+
         // Gold burst particles from ring center.
         spawnSuccessBurst()
 
@@ -480,7 +524,7 @@ final class GameScene: SKScene {
 
         run(SKAction.wait(forDuration: 0.6)) { [weak self] in
             guard let self else { return }
-            self.ballNode.fillColor = self.whiteColor
+            self.ballNode.fillColor = self.currentSkin.color
             self.isInHitCooldown = false
             self.resetBall()
 
@@ -492,6 +536,18 @@ final class GameScene: SKScene {
 
     private func handleGameOver() {
         SoundEngine.shared.playGameOver()
+
+        // Check if this run unlocks a new skin the player didn't have before.
+        let newScore = gameState.score
+        let willUnlockGold    = newScore >= 5  && HighScoreStore().bestScore < 5
+        let willUnlockBlue    = newScore >= 15 && HighScoreStore().bestScore < 15
+        let willUnlockCrimson = newScore >= 25 && HighScoreStore().bestScore < 25
+        if willUnlockGold || willUnlockBlue || willUnlockCrimson {
+            let newSkin: BallSkin = willUnlockCrimson ? .crimson : willUnlockBlue ? .blue : .gold
+            ballNode.fillColor = newSkin.color
+            ballNode.glowWidth = newSkin.glowWidth
+        }
+
         // Brief pause so the player can see the final state before transition.
         run(SKAction.wait(forDuration: 0.3)) { [weak self] in
             guard let self else { return }
@@ -539,6 +595,7 @@ final class GameScene: SKScene {
     // MARK: - Ball helpers
 
     private func resetBall() {
+        scoreLabel?.fontColor = .white
         ballNode.physicsBody?.velocity = .zero
         ballNode.position = ballStartPosition
         ballWasBelowRing = true
@@ -641,6 +698,40 @@ final class GameScene: SKScene {
     }
 
     // MARK: - Scene resize
+
+    /// Describes the visual style applied to the ball based on the player's all-time best score.
+    /// Skins are awarded automatically — no selection UI required.
+    /// Higher tiers signal mastery and provide stronger visual feedback at speed.
+    private enum BallSkin {
+        case white, gold, blue, crimson
+
+        var color: UIColor {
+            switch self {
+            case .white:   return .white
+            case .gold:    return UIColor(red: 0.84, green: 0.65, blue: 0.37, alpha: 1)
+            case .blue:    return UIColor(red: 0.30, green: 0.70, blue: 1.00, alpha: 1)
+            case .crimson: return UIColor(red: 0.95, green: 0.25, blue: 0.25, alpha: 1)
+            }
+        }
+
+        var glowWidth: CGFloat {
+            switch self {
+            case .white:   return 3
+            case .gold:    return 5
+            case .blue:    return 6
+            case .crimson: return 7
+            }
+        }
+
+        /// Resolves the best skin unlocked by the player's all-time high score.
+        static func current() -> BallSkin {
+            let best = HighScoreStore().bestScore
+            if best >= 25 { return .crimson }
+            if best >= 15 { return .blue }
+            if best >= 5  { return .gold }
+            return .white
+        }
+    }
 
     override func didChangeSize(_ oldSize: CGSize) {
         // Reposition labels and ring when safe-area / rotation changes.
