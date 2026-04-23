@@ -241,6 +241,7 @@ final class GameScene: SKScene {
 
         // Reset vertical velocity so every tap gives a consistent arc.
         body.velocity = .zero
+        SoundEngine.shared.playTap()
         body.applyImpulse(CGVector(dx: 0, dy: 32))
         ballWasBelowRing = ballNode.position.y < ringNode.position.y
         ballInFlight = true
@@ -352,6 +353,7 @@ final class GameScene: SKScene {
         guard event == .threadSuccess else { return }
 
         impactLight.impactOccurred()
+        SoundEngine.shared.playSuccess()
         updateHUD()
 
         // Check for milestone text.
@@ -391,6 +393,7 @@ final class GameScene: SKScene {
         updateHUD()
 
         impactHeavy.impactOccurred()
+        SoundEngine.shared.playHit()
         shakeCamera()
         isInHitCooldown = true
         flashBallRed()
@@ -408,6 +411,7 @@ final class GameScene: SKScene {
     }
 
     private func handleGameOver() {
+        SoundEngine.shared.playGameOver()
         // Brief pause so the player can see the final state before transition.
         run(SKAction.wait(forDuration: 0.3)) { [weak self] in
             guard let self else { return }

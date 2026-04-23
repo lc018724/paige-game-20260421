@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		026CD3554F82D18BF197C6D1 /* HighScoreStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B78498FA8D978E5855D2B67 /* HighScoreStore.swift */; };
 		08B61F4E069DDE60AA87F31B /* CollisionCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = D554EE4561FDD4DDAD748461 /* CollisionCategories.swift */; };
+		208CA92873A45CD2E01A3F08 /* SoundEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C599D7CC799CA79EBCDD672 /* SoundEngine.swift */; };
 		31D81CBD26941E06F2726BA3 /* GameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30D8C70950CB2319A90F15DE /* GameApp.swift */; };
 		6C05501BCEF81C5C9D21D557 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FB6BFC5CFB2BA877E04378 /* ContentView.swift */; };
 		9474DC76F18BEFEEEFBAAB16 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF3162803E8970D4AFCE568C /* GameScene.swift */; };
@@ -20,6 +21,7 @@
 		30D8C70950CB2319A90F15DE /* GameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameApp.swift; sourceTree = "<group>"; };
 		74FB6BFC5CFB2BA877E04378 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8B78498FA8D978E5855D2B67 /* HighScoreStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighScoreStore.swift; sourceTree = "<group>"; };
+		8C599D7CC799CA79EBCDD672 /* SoundEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundEngine.swift; sourceTree = "<group>"; };
 		9CE4EB14AD95E657AFB017AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A1170D88D3FD241CB319420C /* GameState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameState.swift; sourceTree = "<group>"; };
 		AD148D80A2FDB6E0ACEC1BC4 /* DifficultyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DifficultyManager.swift; sourceTree = "<group>"; };
@@ -45,6 +47,7 @@
 				30D8C70950CB2319A90F15DE /* GameApp.swift */,
 				DF3162803E8970D4AFCE568C /* GameScene.swift */,
 				9CE4EB14AD95E657AFB017AB /* Info.plist */,
+				8C599D7CC799CA79EBCDD672 /* SoundEngine.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -134,6 +137,7 @@
 				9474DC76F18BEFEEEFBAAB16 /* GameScene.swift in Sources */,
 				DD630E2F58859A6BAAF2B749 /* GameState.swift in Sources */,
 				026CD3554F82D18BF197C6D1 /* HighScoreStore.swift in Sources */,
+				208CA92873A45CD2E01A3F08 /* SoundEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
