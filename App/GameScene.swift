@@ -68,9 +68,11 @@ final class GameScene: SKScene {
 
     // MARK: - State tracking
 
-    /// Tracks whether the ball was below the ring on the previous frame.
-    /// Used to detect the upward crossing event once per throw.
-    private var ballWasBelowRing: Bool = true
+    /// Tracks whether the ball was below the ring's bottom entry edge on the previous frame.
+    /// The threshold is ringY - ringRadius (where the arc actually begins), not the ring center.
+    /// This ensures the crossing fires when the ball reaches the arc, not when it crosses
+    /// the center plane where the angle calculation is still ambiguous.
+    private var ballWasBelowRingEntry: Bool = true
 
     /// True while we are in the post-hit flash cooldown so we don't double-count.
     private var isInHitCooldown: Bool = false
@@ -169,9 +171,9 @@ final class GameScene: SKScene {
 
     private func makeRingNode(gapDegrees: Double, rotationSpeed: Double) -> SKShapeNode {
         let gapHalf = CGFloat(gapDegrees / 2) * .pi / 180
-        // Gap center is at the top (pi/2). The arc is drawn from just past the gap
-        // going clockwise around the full circle, stopping just before the gap reopens.
-        let gapCenter = CGFloat.pi / 2
+        // Gap center is at the bottom (-pi/2) so the opening faces the approaching ball.
+        // The player sees the gap rotating toward them and taps when it faces down.
+        let gapCenter = -CGFloat.pi / 2
         let arcStart = gapCenter + gapHalf
         let arcEnd   = gapCenter - gapHalf
 
@@ -330,7 +332,7 @@ final class GameScene: SKScene {
         body.velocity = .zero
         SoundEngine.shared.playTap()
         body.applyImpulse(CGVector(dx: 0, dy: 32))
-        ballWasBelowRing = ballNode.position.y < ringNode.position.y
+        ballWasBelowRingEntry = ballNode.position.y < (ringNode.position.y - ringRadius)
         ballInFlight = true
         ring1Cleared = false
 
@@ -347,18 +349,24 @@ final class GameScene: SKScene {
 
         let ballY = ballNode.position.y
         let ringY = ringNode.position.y
-        let ballIsNowBelowRing = ballY < ringY
+        // Use the bottom edge of the ring arc as the crossing threshold so that the
+        // ball's angle at crossing is ≈ -π/2 (pointing straight down from ring center),
+        // which matches the gap position and makes the angle math precise.
+        let entryY = ringY - ringRadius
+        let ballIsNowBelowRingEntry = ballY < entryY
 
-        // Detect upward crossing (ball just passed ring1 plane going up).
-        if ballWasBelowRing && !ballIsNowBelowRing {
+        // Detect upward crossing (ball just passed ring1 bottom-edge going up).
+        if ballWasBelowRingEntry && !ballIsNowBelowRingEntry {
             handleRing1Crossing()
         }
 
-        ballWasBelowRing = ballIsNowBelowRing
+        ballWasBelowRingEntry = ballIsNowBelowRingEntry
 
-        // Track ring2 crossing if it exists.
+        // Track ring2 crossing if it exists. Use bottom edge (ring2Y - ringRadius)
+        // for the same reason as ring1: ball angle at crossing is ≈ -π/2.
         if let r2 = ring2Node {
-            let ballIsNowBelowRing2 = ballY < r2.position.y
+            let ring2EntryY = r2.position.y - ringRadius
+            let ballIsNowBelowRing2 = ballY < ring2EntryY
             if ring2WasBelowBall && !ballIsNowBelowRing2 {
                 handleRing2Crossing()
             }
@@ -419,7 +427,7 @@ final class GameScene: SKScene {
     /// falls within the rotating gap sector.
     private func isBallInGap(for ring: SKShapeNode) -> Bool {
         let ringZRot = ring.zRotation
-        let gapCenterWorld = CGFloat.pi / 2 + ringZRot
+        let gapCenterWorld = -CGFloat.pi / 2 + ringZRot
         let relX = ballNode.position.x - ring.position.x
         let relY = ballNode.position.y - ring.position.y
         let angle = atan2(relY, relX)
@@ -598,7 +606,7 @@ final class GameScene: SKScene {
         scoreLabel?.fontColor = .white
         ballNode.physicsBody?.velocity = .zero
         ballNode.position = ballStartPosition
-        ballWasBelowRing = true
+        ballWasBelowRingEntry = true
         ballInFlight = false
         ring1Cleared = false
         if let r2 = ring2Node {
@@ -746,7 +754,7 @@ final class GameScene: SKScene {
         }
 
         // Ball start drifts with scene height; only move it if ball is at rest.
-        if ballNode?.physicsBody?.velocity == .zero || ballWasBelowRing {
+        if ballNode?.physicsBody?.velocity == .zero || ballWasBelowRingEntry {
             ballNode?.position = ballStartPosition
         }
     }
