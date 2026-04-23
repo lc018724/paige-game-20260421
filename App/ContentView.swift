@@ -132,13 +132,19 @@ private struct MenuView: View {
 
 // MARK: - ResultView
 
-/// Game-over screen. Shows final score, personal best, and a replay button.
+/// Game-over screen. Shows final score, personal best, streak, and a replay button.
+/// `bestScore` must be passed in after `HighScoreStore.update(score:)` has been called
+/// so it already reflects this run when the view renders.
 struct ResultView: View {
     let score: Int
     let bestScore: Int
     let onReplay: () -> Void
 
     private var isNewBest: Bool { score >= bestScore && score > 0 }
+    private var streak: Int { HighScoreStore().currentStreak }
+
+    /// Scale state for the NEW BEST pop animation.
+    @State private var newBestScale: CGFloat = 0.6
 
     var body: some View {
         VStack(spacing: 24) {
@@ -158,11 +164,35 @@ struct ResultView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color(red: 0.84, green: 0.65, blue: 0.37))
                     .tracking(6)
-            } else if bestScore > 0 {
-                Text("BEST  \(bestScore)")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .tracking(4)
+                    .scaleEffect(newBestScale)
+                    .onAppear {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.55)) {
+                            newBestScale = 1.0
+                        }
+                    }
+            } else {
+                // Show improvement delta when player scored something this run.
+                if score > 0 && bestScore > 0 {
+                    let delta = bestScore - score
+                    Text("up \(delta) from best")
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .tracking(2)
+                }
+                if bestScore > 0 {
+                    Text("BEST  \(bestScore)")
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .tracking(4)
+                }
+            }
+
+            // Streak line: only surfaced when there is a meaningful run going.
+            if streak >= 2 {
+                Text("STREAK  \(streak)  DAYS")
+                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.3))
+                    .tracking(3)
             }
 
             Spacer()
@@ -172,10 +202,12 @@ struct ResultView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .tracking(4)
                     .foregroundStyle(Color(red: 0.04, green: 0.05, blue: 0.07))
-                    .frame(width: 200, height: 56)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
                     .background(Color(red: 0.84, green: 0.65, blue: 0.37))
                     .clipShape(RoundedRectangle(cornerRadius: 28))
             }
+            .padding(.horizontal, 40)
 
             Spacer().frame(height: 60)
         }

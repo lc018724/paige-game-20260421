@@ -60,6 +60,12 @@ final class GameScene: SKScene {
     /// True once ball has cleanly passed ring1 on the current throw (two-ring mode).
     private var ring1Cleared: Bool = false
 
+    // MARK: - First-run tutorial
+
+    /// True on the very first session before the player has ever fired.
+    /// Persisted in UserDefaults so the hint disappears permanently after one tap.
+    private var isFirstRun: Bool = !UserDefaults.standard.bool(forKey: "hasPlayedOnce")
+
     // MARK: - State tracking
 
     /// Tracks whether the ball was below the ring on the previous frame.
@@ -269,6 +275,22 @@ final class GameScene: SKScene {
         comboLabel.alpha = 0
         comboLabel.zPosition = 10
         addChild(comboLabel)
+
+        // First-run hint: pulsing label near the ball so new players know what to do.
+        if isFirstRun {
+            let hint = SKLabelNode(fontNamed: "Georgia")
+            hint.name = "hintLabel"
+            hint.text = "TAP TO FIRE"
+            hint.fontSize = 15
+            hint.fontColor = UIColor.white.withAlphaComponent(0.55)
+            hint.position = CGPoint(x: 0, y: ballStartY - 40)
+            hint.zPosition = 15
+            hint.run(SKAction.repeatForever(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.2, duration: 0.8),
+                SKAction.fadeAlpha(to: 0.55, duration: 0.8)
+            ])))
+            addChild(hint)
+        }
     }
 
     private func updateHUD() {
@@ -282,6 +304,16 @@ final class GameScene: SKScene {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard !gameState.isOver else { return }
         guard let body = ballNode.physicsBody else { return }
+
+        // Dismiss the first-run hint permanently on the player's very first tap.
+        if isFirstRun {
+            isFirstRun = false
+            UserDefaults.standard.set(true, forKey: "hasPlayedOnce")
+            childNode(withName: "hintLabel")?.run(SKAction.sequence([
+                SKAction.fadeOut(withDuration: 0.3),
+                SKAction.removeFromParent()
+            ]))
+        }
 
         // Cancel idle pulse before launching.
         ballNode.removeAction(forKey: "idlePulse")
@@ -443,6 +475,11 @@ final class GameScene: SKScene {
         ])
         scoreLabel.run(pop)
 
+        // If this score beats the stored best, briefly turn the label gold as a preview.
+        if gameState.score > HighScoreStore().bestScore {
+            scoreLabel.fontColor = goldColor
+        }
+
         // Gold burst particles from ring center.
         spawnSuccessBurst()
 
@@ -547,6 +584,8 @@ final class GameScene: SKScene {
         if let r2 = ring2Node {
             ring2WasBelowBall = ballNode.position.y < r2.position.y
         }
+        // Restore score label color to white after any gold new-best flash.
+        scoreLabel.fontColor = whiteColor
         startIdlePulse()
     }
 
