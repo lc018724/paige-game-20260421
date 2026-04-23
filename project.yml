@@ -1,0 +1,23 @@
+name: Thread
+options:
+  bundleIdPrefix: app.thread
+  createIntermediateGroups: true
+targets:
+  Thread:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources/ThreadGame
+      - path: App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.thread.ios
+        SWIFT_VERSION: "5.9"
+    info:
+      path: App/Info.plist
+      properties:
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
