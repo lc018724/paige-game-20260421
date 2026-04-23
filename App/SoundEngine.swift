@@ -15,6 +15,11 @@ final class SoundEngine {
         engine.attach(mixer)
         engine.connect(mixer, to: engine.mainMixerNode,
                        format: engine.mainMixerNode.outputFormat(forBus: 0))
+        startEngine()
+    }
+
+    private func startEngine() {
+        guard !engine.isRunning else { return }
         try? engine.start()
     }
 
@@ -32,7 +37,11 @@ final class SoundEngine {
     /// Plays a sequence of (frequency, duration) notes back to back.
     private func play(notes: [(Float, Double)], volume: Float, waveform: Waveform = .sine) {
         let sampleRate: Double = 44100
-        let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)!
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1) else { return }
+
+        // Restart engine if it stopped (e.g. audio session interrupted).
+        if !engine.isRunning { startEngine() }
+        guard engine.isRunning else { return }
 
         let playerNode = AVAudioPlayerNode()
         engine.attach(playerNode)
@@ -43,9 +52,9 @@ final class SoundEngine {
 
         for (freq, dur) in notes {
             let frameCount = AVAudioFrameCount(sampleRate * dur)
-            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else { continue }
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount),
+                  let data = buffer.floatChannelData?.pointee else { continue }
             buffer.frameLength = frameCount
-            let data = buffer.floatChannelData![0]
             for i in 0..<Int(frameCount) {
                 let t = Float(i) / Float(sampleRate)
                 let phase = 2 * Float.pi * freq * t
