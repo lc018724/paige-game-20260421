@@ -42,6 +42,7 @@ final class GameScene: SKScene {
     private var ballNode: SKShapeNode!
     private var scoreLabel: SKLabelNode!
     private var livesLabel: SKLabelNode!
+    private var comboLabel: SKLabelNode!
 
     // MARK: - Camera
 
@@ -78,6 +79,14 @@ final class GameScene: SKScene {
 
     /// Alternates 0/1 each frame to emit trail dots every other frame.
     private var trailFrameSkip: Int = 0
+
+    // MARK: - Combo state
+
+    /// Number of consecutive successful threads without a ring hit.
+    private var consecutiveThreads: Int = 0
+
+    /// Score multiplier derived from the current streak (1, 2, or 3).
+    private var comboMultiplier: Int = 1
 
     // MARK: - Milestone labels
 
@@ -173,6 +182,35 @@ final class GameScene: SKScene {
         node.lineCap = .round
         node.name = "ring"
 
+        // Gap-end indicator dots so the player always sees where the opening is.
+        for angle in [arcStart, arcEnd] {
+            let dot = SKShapeNode(circleOfRadius: 4)
+            dot.fillColor = goldColor.withAlphaComponent(0.9)
+            dot.strokeColor = .clear
+            dot.position = CGPoint(
+                x: cos(angle) * ringRadius,
+                y: sin(angle) * ringRadius
+            )
+            node.addChild(dot)
+        }
+
+        // Speed blur streaks at high rotation speeds.
+        if rotationSpeed >= 2.5 {
+            for i in 0..<3 {
+                let streakAngle = CGFloat(i) * (2 * .pi / 3)
+                let innerR = ringRadius - 14
+                let outerR = ringRadius + 14
+                let streak = SKShapeNode()
+                let p = CGMutablePath()
+                p.move(to: CGPoint(x: cos(streakAngle) * innerR, y: sin(streakAngle) * innerR))
+                p.addLine(to: CGPoint(x: cos(streakAngle) * outerR, y: sin(streakAngle) * outerR))
+                streak.path = p
+                streak.strokeColor = goldColor.withAlphaComponent(0.35)
+                streak.lineWidth = 2
+                node.addChild(streak)
+            }
+        }
+
         // Continuous rotation. period = 2pi / radPerSec
         let period = (2.0 * Double.pi) / max(rotationSpeed, 0.01)
         let spin = SKAction.rotate(byAngle: .pi * 2, duration: period)
@@ -221,6 +259,16 @@ final class GameScene: SKScene {
         livesLabel.position = CGPoint(x: 0, y: size.height * 0.5 - 120)
         livesLabel.zPosition = 10
         addChild(livesLabel)
+
+        comboLabel = SKLabelNode(fontNamed: "Georgia-Bold")
+        comboLabel.fontSize = 16
+        comboLabel.fontColor = goldColor
+        comboLabel.verticalAlignmentMode = .top
+        comboLabel.horizontalAlignmentMode = .center
+        comboLabel.position = CGPoint(x: 0, y: size.height * 0.5 - 155)
+        comboLabel.alpha = 0
+        comboLabel.zPosition = 10
+        addChild(comboLabel)
     }
 
     private func updateHUD() {
@@ -352,9 +400,36 @@ final class GameScene: SKScene {
         let event = gameState.threadSuccess()
         guard event == .threadSuccess else { return }
 
+        // Update combo streak before any visual work.
+        consecutiveThreads += 1
+        let prevMultiplier = comboMultiplier
+        if consecutiveThreads >= 6 {
+            comboMultiplier = 3
+        } else if consecutiveThreads >= 3 {
+            comboMultiplier = 2
+        } else {
+            comboMultiplier = 1
+        }
+
         impactLight.impactOccurred()
         SoundEngine.shared.playSuccess()
         updateHUD()
+
+        // Show or refresh the combo label.
+        if comboMultiplier > 1 {
+            comboLabel.text = "COMBO x\(comboMultiplier)"
+            let hitNewTier = comboMultiplier > prevMultiplier
+            if hitNewTier {
+                // Scale pop when a new tier is reached.
+                comboLabel.alpha = 1
+                comboLabel.setScale(1.5)
+                comboLabel.run(SKAction.sequence([
+                    SKAction.scale(to: 1.0, duration: 0.15),
+                ]))
+            } else {
+                comboLabel.run(SKAction.fadeIn(withDuration: 0.1))
+            }
+        }
 
         // Check for milestone text.
         if let milestoneText = milestoneLabels[gameState.score] {
@@ -391,6 +466,11 @@ final class GameScene: SKScene {
     private func handleRingHit() {
         let event = gameState.ringHit()
         updateHUD()
+
+        // Tear down combo on any ring hit.
+        consecutiveThreads = 0
+        comboMultiplier = 1
+        comboLabel.run(SKAction.fadeOut(withDuration: 0.2))
 
         impactHeavy.impactOccurred()
         SoundEngine.shared.playHit()
@@ -564,9 +644,10 @@ final class GameScene: SKScene {
 
     override func didChangeSize(_ oldSize: CGSize) {
         // Reposition labels and ring when safe-area / rotation changes.
-        scoreLabel?.position = CGPoint(x: 0, y: size.height * 0.5 - 60)
-        livesLabel?.position = CGPoint(x: 0, y: size.height * 0.5 - 120)
-        ringNode?.position   = CGPoint(x: 0, y: size.height * 0.05)
+        scoreLabel?.position  = CGPoint(x: 0, y: size.height * 0.5 - 60)
+        livesLabel?.position  = CGPoint(x: 0, y: size.height * 0.5 - 120)
+        comboLabel?.position  = CGPoint(x: 0, y: size.height * 0.5 - 155)
+        ringNode?.position    = CGPoint(x: 0, y: size.height * 0.05)
 
         // Reposition ring2 if it exists.
         if let r2 = ring2Node, let rn = ringNode {

@@ -21,3 +21,17 @@ targets:
           UIColorName: ""
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+  ThreadUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: UITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.thread.uitests
+        SWIFT_VERSION: "5.9"
+        TEST_TARGET_NAME: Thread
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Thread
